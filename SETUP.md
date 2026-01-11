@@ -17,17 +17,22 @@ This guide will help you get the Instagram AI Assistant up and running.
 ### Create Vector Store
 
 1. Go to [platform.openai.com](https://platform.openai.com/)
-2. Navigate to **Storage** → **Vector Stores**
-3. Click **Create Vector Store**
+2. Navigate to **Dashboard** → **Storage** (left sidebar)
+3. Click **Create vector store**
 4. Name it: `printerior-knowledge-base`
-5. **Copy the Vector Store ID** (starts with `vs_`)
+5. Click **Create**
+6. **Copy the Vector Store ID** (starts with `vs_`)
 
 ### Get API Key
 
-1. Go to **API Keys** section
+1. In OpenAI dashboard, go to **API Keys** (left sidebar)
 2. Click **Create new secret key**
-3. Name it: `instagram-assistant`
-4. **Copy the API key** (starts with `sk-`)
+3. Choose **Service account** (recommended for production)
+4. Name it: `instagram-assistant`
+5. **Copy the API key** (starts with `sk-`)
+   - ⚠️ **Save it immediately** - you won't see it again!
+
+**Note:** The Assistant will be created automatically on first use - no manual setup needed!
 
 ---
 

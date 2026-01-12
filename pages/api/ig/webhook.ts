@@ -133,8 +133,25 @@ export default async function handler(
             console.log('Entries:', body.entry?.length || 0);
 
             for (const entry of body.entry || []) {
+                console.log('Entry changes:', entry.changes?.length || 0);
                 console.log('Entry messaging:', entry.messaging?.length || 0);
 
+                // Handle changes[] structure (Instagram messages)
+                for (const change of entry.changes || []) {
+                    if (change.field === 'messages' && change.value?.message?.text) {
+                        const senderId = change.value.sender.id;
+                        const messageText = change.value.message.text;
+
+                        console.log(`📨 Message from ${senderId}: ${messageText}`);
+
+                        // Process message asynchronously
+                        handleIncomingMessage(senderId, messageText).catch(error => {
+                            console.error('Error in handleIncomingMessage:', error);
+                        });
+                    }
+                }
+
+                // Also handle messaging[] structure (for compatibility)
                 for (const messaging of entry.messaging || []) {
                     console.log('Messaging event:', JSON.stringify(messaging, null, 2));
 

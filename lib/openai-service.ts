@@ -115,6 +115,15 @@ export async function generateResponse(
             }
         ];
 
+        // DEBUG: Connectivity Test
+        console.log('generateResponse: Step 4.0 - Connectivity Check');
+        try {
+            await openai.models.list();
+            console.log('generateResponse: Step 4.1 - Connectivity OK');
+        } catch (connError: any) {
+            console.error('generateResponse: Step 4.1 - Connectivity FAILED:', connError.message);
+        }
+
         const completionPromise = openai.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: messages,

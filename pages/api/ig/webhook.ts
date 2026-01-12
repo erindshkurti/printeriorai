@@ -56,10 +56,14 @@ async function handleIncomingMessage(
         // await sendTypingIndicator(senderId);
 
         // Generate AI response using RAG
+        console.log('Calling OpenAI to generate response...');
         const { response } = await generateResponse(messageText);
+        console.log('OpenAI response received:', response);
 
         // Send response back to user
+        console.log('Sending message to Instagram...');
         await sendMessage(senderId, response);
+        console.log('Message sent successfully to Instagram');
 
         console.log(`Sent response to ${senderId}: ${response}`);
     } catch (error) {

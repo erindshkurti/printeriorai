@@ -48,7 +48,7 @@ export async function getOrCreateAssistant(): Promise<string> {
     const assistant = await openai.beta.assistants.create({
         name: 'Printerior.al Assistant',
         instructions: SYSTEM_PROMPT,
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         tools: [{ type: 'file_search' }],
         tool_resources: {
             file_search: {
@@ -107,6 +107,14 @@ export async function generateResponse(
                     threadId: thread.id,
                 };
             }
+        }
+
+        // Log detailed error information
+        console.error('Assistant run failed!');
+        console.error('Run status:', run.status);
+        console.error('Run ID:', run.id);
+        if (run.last_error) {
+            console.error('Last error:', JSON.stringify(run.last_error, null, 2));
         }
 
         throw new Error(`Assistant run failed with status: ${run.status}`);

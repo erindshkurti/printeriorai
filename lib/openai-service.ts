@@ -38,21 +38,17 @@ Nëse pyetja është jashtë fushës së informacionit tuaj:
 
 import fs from 'fs';
 import path from 'path';
+import embeddingsData from '../data/embeddings.json';
 
 // Load embeddings into memory once
 let vectorStore: any[] | null = null;
 
 function loadVectorStore() {
     if (!vectorStore) {
+        console.log('Loading vector store...');
         try {
-            const dataPath = path.join(process.cwd(), 'data', 'embeddings.json');
-            if (fs.existsSync(dataPath)) {
-                vectorStore = JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
-                console.log(`Loaded ${vectorStore?.length} embeddings into memory.`);
-            } else {
-                console.warn('Embeddings file not found at:', dataPath);
-                vectorStore = [];
-            }
+            vectorStore = embeddingsData as any[];
+            console.log(`Loaded ${vectorStore?.length} embeddings from import.`);
         } catch (error) {
             console.error('Failed to load embeddings:', error);
             vectorStore = [];
@@ -93,6 +89,7 @@ export async function generateResponse(
         const queryVector = embeddingResponse.data[0].embedding;
 
         // 2. Search local memory
+        console.log('generateResponse: Step 3 - Search Local Store');
         const store = loadVectorStore();
         let context = '';
 
@@ -109,6 +106,7 @@ export async function generateResponse(
         }
 
         // 3. Generate Answer
+        console.log('generateResponse: Step 4 - Generate Completion');
         const messages: any[] = [
             { role: 'system', content: SYSTEM_PROMPT },
             {
@@ -124,6 +122,7 @@ export async function generateResponse(
             max_tokens: 500,
         });
 
+        console.log('generateResponse: Step 5 - Completion Received');
         const responseText = completion.choices[0].message.content || '';
         const validatedResponse = ensureAlbanianOnly(responseText);
 

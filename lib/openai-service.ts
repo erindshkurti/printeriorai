@@ -122,15 +122,15 @@ export async function generateResponse(
         // 3. Generate Answer using OpenAI SDK
         console.log('generateResponse: Step 4 - Generate Completion');
         const completion = await openai.chat.completions.create({
-            model: 'gpt-5-mini',
+            model: 'gpt-4o-mini',
             messages: messages,
-            max_completion_tokens: 500,
+            temperature: 0.7,
+            max_tokens: 500,
         });
 
-        console.log('generateResponse: Step 5 - Completion Received');
-
-        const responseText = completion.choices[0].message.content || '';
+        const responseText = completion.choices[0]?.message?.content || '';
         const validatedResponse = ensureAlbanianOnly(responseText);
+        console.log('OpenAI response received:', validatedResponse);
 
         return {
             response: validatedResponse,

@@ -125,21 +125,37 @@ export default async function handler(
         // Parse the body after signature verification
         const body = JSON.parse(rawBody);
 
+        // Debug: Log the entire payload
+        console.log('Webhook payload:', JSON.stringify(body, null, 2));
+
         if (body.object === 'instagram') {
+            console.log('Processing Instagram webhook...');
+            console.log('Entries:', body.entry?.length || 0);
+
             for (const entry of body.entry || []) {
+                console.log('Entry messaging:', entry.messaging?.length || 0);
+
                 for (const messaging of entry.messaging || []) {
+                    console.log('Messaging event:', JSON.stringify(messaging, null, 2));
+
                     // Handle message event
                     if (messaging.message && messaging.message.text) {
                         const senderId = messaging.sender.id;
                         const messageText = messaging.message.text;
 
+                        console.log(`📨 Message from ${senderId}: ${messageText}`);
+
                         // Process message asynchronously (don't block webhook response)
                         handleIncomingMessage(senderId, messageText).catch(error => {
                             console.error('Error in handleIncomingMessage:', error);
                         });
+                    } else {
+                        console.log('Not a text message event');
                     }
                 }
             }
+        } else {
+            console.log('Not an Instagram webhook, object:', body.object);
         }
 
         // Always respond with 200 OK to acknowledge receipt

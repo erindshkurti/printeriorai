@@ -83,7 +83,7 @@ async function crawl(url: string, depth: number) {
             }
         }
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Failed to crawl ${url}:`, error.message);
     }
 }

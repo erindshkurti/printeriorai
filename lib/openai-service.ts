@@ -49,7 +49,12 @@ export async function getOrCreateAssistant(): Promise<string> {
         name: 'Printerior.al Assistant',
         instructions: SYSTEM_PROMPT,
         model: 'gpt-4o-mini',
-        tools: [{ type: 'file_search' }],
+        tools: [{
+            type: 'file_search',
+            file_search: {
+                max_num_results: 3
+            }
+        }],
         tool_resources: {
             file_search: {
                 vector_store_ids: [VECTOR_STORE_ID!],

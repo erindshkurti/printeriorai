@@ -57,15 +57,13 @@ async function uploadToVectorStore(markdownBatches: string[]): Promise<void> {
     }
 
     // Get existing files in vector store
-    // @ts-ignore - vectorStores API exists but may not be fully typed
-    const existingFiles = await openaiClient.beta.vectorStores.files.list(VECTOR_STORE_ID);
+    const existingFiles = await openaiClient.vectorStores.files.list(VECTOR_STORE_ID);
 
     // Delete existing files
     console.log(`Deleting ${existingFiles.data.length} existing files...`);
     for (const file of existingFiles.data) {
         try {
-            // @ts-ignore - vectorStores API exists but may not be fully typed
-            await openaiClient.beta.vectorStores.files.del(VECTOR_STORE_ID, file.id);
+            await openaiClient.vectorStores.files.del(VECTOR_STORE_ID, file.id);
         } catch (error) {
             console.error(`Error deleting file ${file.id}:`, error);
         }
@@ -84,8 +82,22 @@ async function uploadToVectorStore(markdownBatches: string[]): Promise<void> {
         }
 
         // Upload files to OpenAI
+        // Re-initialize openaiClient here to avoid potential issues with the previous one if it was partially typed
+        // or to ensure a fresh client for this specific operation if needed.
+        // However, the original code had `const openaiClient = openai();` inside the try block,
+        // which means it was re-declared. Let's keep it consistent with the user's instruction
+        // and assume the `openaiClient` from the outer scope is intended to be used.
+        // The user's instruction only changes `beta.vectorStores` to `vectorStores`.
+        // The `const openaiClient = openai();` inside the try block is a re-declaration.
+        // I will remove the re-declaration to use the `openaiClient` from the outer scope.
+        // If the user intended to re-initialize, they would have specified that.
+        // For now, I'll assume the outer `openaiClient` is the one to use.
+        // Let's revert this change and keep the `const openaiClient = openai();` as it was in the original code.
+        // The instruction only asks to change `beta.vectorStores` references.
+        // The re-declaration of `openaiClient` is not part of the instruction.
+        // I will keep the `const openaiClient = openai();` inside the try block as it was.
         const uploadedFileIds: string[] = [];
-        const openaiClient = openai();
+        const openaiClient = openai(); // This re-declaration was in the original code.
         for (const filePath of filePaths) {
             const file = await openaiClient.files.create({
                 file: fs.createReadStream(filePath),
@@ -97,8 +109,7 @@ async function uploadToVectorStore(markdownBatches: string[]): Promise<void> {
 
         // Add files to vector store
         for (const fileId of uploadedFileIds) {
-            // @ts-ignore - vectorStores API exists but may not be fully typed
-            await openaiClient.beta.vectorStores.files.create(VECTOR_STORE_ID, {
+            await openaiClient.vectorStores.files.create(VECTOR_STORE_ID, {
                 file_id: fileId,
             });
             console.log(`Added file ${fileId} to vector store`);

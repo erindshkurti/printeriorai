@@ -138,10 +138,11 @@ export async function generateResponse(
                 similarity: cosineSimilarity(queryVector, item.embedding)
             }))
                 .sort((a, b) => b.similarity - a.similarity)
-                .slice(0, 5); // Get top 5 chunks
+                .slice(0, 3); // REDUCED: Get top 3 chunks to save tokens/bandwidth
 
             context = matches.map(m => m.item.text).join('\n\n');
             console.log(`Found ${matches.length} context chunks. Top similarity: ${matches[0]?.similarity.toFixed(4)}`);
+            console.log(`Context length: ${context.length} characters`);
         }
 
         // 3. Generate Answer
@@ -159,21 +160,24 @@ export async function generateResponse(
         console.log('generateResponse: Step 4 - Generate Completion (via fetch)');
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 4000); // REDUCED: 4s timeout
 
         try {
+            const requestBody = {
+                model: 'gpt-4o-mini',
+                messages: messages,
+                temperature: 0.7,
+                max_tokens: 500
+            };
+            console.log('Request body size:', JSON.stringify(requestBody).length);
+
             const fetchResponse = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
                 },
-                body: JSON.stringify({
-                    model: 'gpt-4o-mini',
-                    messages: messages,
-                    temperature: 0.7,
-                    max_tokens: 500
-                }),
+                body: JSON.stringify(requestBody),
                 signal: controller.signal
             });
 

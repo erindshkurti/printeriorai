@@ -80,13 +80,31 @@ export async function generateResponse(
     try {
         const openai = getOpenAIClient();
 
-        // 1. Embed the query
-        const embeddingResponse = await openai.embeddings.create({
-            model: 'text-embedding-3-small',
-            input: message,
-            encoding_format: 'float',
+        // 1. Embed the query (using fetch to avoid SDK hang)
+        console.log('generateResponse: Step 1 - Create Embedding (via fetch)');
+
+        const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'text-embedding-3-small',
+                input: message,
+                encoding_format: 'float'
+            })
         });
-        const queryVector = embeddingResponse.data[0].embedding;
+
+        if (!embeddingResponse.ok) {
+            const errorText = await embeddingResponse.text();
+            throw new Error(`OpenAI Embeddings Error: ${embeddingResponse.status} - ${errorText}`);
+        }
+
+        const embeddingData = await embeddingResponse.json();
+        const queryVector = embeddingData.data[0].embedding;
+
+        console.log('generateResponse: Step 2 - Embedding Created');
 
         // 2. Search local memory
         console.log('generateResponse: Step 3 - Search Local Store');
@@ -106,7 +124,6 @@ export async function generateResponse(
         }
 
         // 3. Generate Answer
-        console.log('generateResponse: Step 4 - Generate Completion');
         const messages: any[] = [
             { role: 'system', content: SYSTEM_PROMPT },
             {

@@ -80,8 +80,27 @@ export async function generateResponse(
     try {
         const openai = getOpenAIClient();
 
+        // DEBUG: General Internet Connectivity Check
+        console.log('generateResponse: Step 0 - Ping Google');
+        try {
+            const googleController = new AbortController();
+            const googleTimeout = setTimeout(() => googleController.abort(), 3000);
+
+            const googleResp = await fetch('https://www.google.com', {
+                method: 'HEAD',
+                signal: googleController.signal
+            });
+            clearTimeout(googleTimeout);
+            console.log(`generateResponse: Step 0 - Google Ping Status: ${googleResp.status}`);
+        } catch (pingError: any) {
+            console.error('generateResponse: Step 0 - Google Ping FAILED:', pingError.message);
+        }
+
         // 1. Embed the query (using fetch to avoid SDK hang)
         console.log('generateResponse: Step 1 - Create Embedding (via fetch)');
+
+        const embedController = new AbortController();
+        const embedTimeout = setTimeout(() => embedController.abort(), 5000); // 5s timeout
 
         const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
             method: 'POST',
@@ -93,8 +112,10 @@ export async function generateResponse(
                 model: 'text-embedding-3-small',
                 input: message,
                 encoding_format: 'float'
-            })
+            }),
+            signal: embedController.signal
         });
+        clearTimeout(embedTimeout);
 
         if (!embeddingResponse.ok) {
             const errorText = await embeddingResponse.text();

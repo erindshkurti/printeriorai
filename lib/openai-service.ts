@@ -115,12 +115,22 @@ export async function generateResponse(
             }
         ];
 
-        const completion = await openai.chat.completions.create({
+        const completionPromise = openai.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: messages,
             temperature: 0.7,
             max_tokens: 500,
         });
+
+        // Force a timeout of 8 seconds (Vercel limit is 10s)
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('OpenAI Request Timed Out (>8s)')), 8000)
+        );
+
+        console.log('generateResponse: Step 4.5 - Awaiting Completion with Timeout...');
+
+        // Race the request against the clock
+        const completion = await Promise.race([completionPromise, timeoutPromise]) as any;
 
         console.log('generateResponse: Step 5 - Completion Received');
         const responseText = completion.choices[0].message.content || '';
@@ -131,8 +141,8 @@ export async function generateResponse(
             threadId: 'local-rag', // No persistent threads in this simple mode
         };
 
-    } catch (error) {
-        console.error('Error generating response:', error);
+    } catch (error: any) {
+        console.error('Error generating response:', error.message || error);
         throw error;
     }
 }

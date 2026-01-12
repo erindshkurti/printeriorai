@@ -4,6 +4,11 @@ const PAGE_ACCESS_TOKEN = process.env.IG_PAGE_ACCESS_TOKEN;
 const GRAPH_API_VERSION = 'v21.0';
 const GRAPH_API_URL = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000;
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 /**
  * Send a message to an Instagram user via DM
  */
@@ -11,28 +16,43 @@ export async function sendMessage(
     recipientId: string,
     messageText: string
 ): Promise<void> {
-    try {
-        const response = await axios.post(
-            `${GRAPH_API_URL}/me/messages`,
-            {
-                recipient: {
-                    id: recipientId,
-                },
-                message: {
-                    text: messageText,
-                },
-            },
-            {
-                params: {
-                    access_token: PAGE_ACCESS_TOKEN,
-                },
-            }
-        );
+    let attempt = 0;
+    while (attempt < MAX_RETRIES) {
+        try {
+            attempt++;
+            console.log(`Sending message attempt ${attempt}/${MAX_RETRIES} to ${recipientId}...`);
 
-        console.log('Message sent successfully:', response.data);
-    } catch (error) {
-        console.error('Error sending Instagram message:', error);
-        throw error;
+            const response = await axios.post(
+                `${GRAPH_API_URL}/me/messages`,
+                {
+                    recipient: {
+                        id: recipientId,
+                    },
+                    message: {
+                        text: messageText,
+                    },
+                },
+                {
+                    params: {
+                        access_token: PAGE_ACCESS_TOKEN,
+                    },
+                    timeout: 5000, // 5s timeout for the request itself
+                }
+            );
+
+            console.log(`✅ Message sent successfully on attempt ${attempt}:`, JSON.stringify(response.data));
+            return; // Success
+        } catch (error: any) {
+            console.error(`❌ Error attempting to send message (attempt ${attempt}):`, error.response?.data || error.message);
+
+            if (attempt === MAX_RETRIES) {
+                console.error('All retry attempts failed.');
+                throw error;
+            }
+
+            console.log(`Waiting ${RETRY_DELAY}ms before retry...`);
+            await sleep(RETRY_DELAY);
+        }
     }
 }
 

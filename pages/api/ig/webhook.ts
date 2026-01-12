@@ -78,17 +78,30 @@ export default async function handler(
             res.status(403).send('Forbidden');
         }
     } else if (req.method === 'POST') {
+        // Read raw body for signature verification
+        const chunks: Buffer[] = [];
+        for await (const chunk of req) {
+            chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+        }
+        const rawBody = Buffer.concat(chunks).toString('utf8');
+
         // Verify webhook signature
         const signature = req.headers['x-hub-signature-256'] as string;
-        const payload = JSON.stringify(req.body);
 
-        if (!signature || !verifyWebhookSignature(payload, signature, META_APP_SECRET!)) {
-            console.error('Invalid webhook signature');
+        if (!signature || !META_APP_SECRET) {
+            console.error('Missing signature or app secret');
             return res.status(403).json({ error: 'Invalid signature' });
         }
 
-        // Process webhook event
-        const body = req.body;
+        if (!verifyWebhookSignature(rawBody, signature, META_APP_SECRET)) {
+            console.error('Invalid webhook signature');
+            console.error('Signature from Meta:', signature);
+            console.error('Payload length:', rawBody.length);
+            return res.status(403).json({ error: 'Invalid signature' });
+        }
+
+        // Parse the body after signature verification
+        const body = JSON.parse(rawBody);
 
         if (body.object === 'instagram') {
             for (const entry of body.entry || []) {
@@ -113,3 +126,10 @@ export default async function handler(
         res.status(405).json({ error: 'Method not allowed' });
     }
 }
+
+// Disable body parsing to get raw body for signature verification
+export const config = {
+    api: {
+        bodyParser: false,
+    },
+};

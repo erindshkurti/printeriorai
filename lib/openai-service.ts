@@ -35,39 +35,47 @@ Nëse pyetja është jashtë fushës së informacionit tuaj:
 - Sugjeroni kontakt përmes WhatsApp ose email për pyetje specifike të çmimeve
 - Ofroni numrin e telefonit ose email-in e kompanisë nëse është e nevojshme`;
 
-/**
- * Create or get the assistant
- */
-export async function getOrCreateAssistant(): Promise<string> {
-    if (ASSISTANT_ID) {
-        return ASSISTANT_ID;
-    }
 
-    // Create a new assistant if not exists
-    const openai = getOpenAIClient();
-    const assistant = await openai.beta.assistants.create({
-        name: 'Printerior.al Assistant',
-        instructions: SYSTEM_PROMPT,
-        model: 'gpt-4o-mini',
-        tools: [{
-            type: 'file_search',
-            file_search: {
-                max_num_results: 3
+import fs from 'fs';
+import path from 'path';
+
+// Load embeddings into memory once
+let vectorStore: any[] | null = null;
+
+function loadVectorStore() {
+    if (!vectorStore) {
+        try {
+            const dataPath = path.join(process.cwd(), 'data', 'embeddings.json');
+            if (fs.existsSync(dataPath)) {
+                vectorStore = JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
+                console.log(`Loaded ${vectorStore?.length} embeddings into memory.`);
+            } else {
+                console.warn('Embeddings file not found at:', dataPath);
+                vectorStore = [];
             }
-        }],
-        tool_resources: {
-            file_search: {
-                vector_store_ids: [VECTOR_STORE_ID!],
-            },
-        },
-    });
+        } catch (error) {
+            console.error('Failed to load embeddings:', error);
+            vectorStore = [];
+        }
+    }
+    return vectorStore;
+}
 
-    console.log('Created new assistant:', assistant.id);
-    return assistant.id;
+function cosineSimilarity(vecA: number[], vecB: number[]) {
+    let dotProduct = 0;
+    let magnitudeA = 0;
+    let magnitudeB = 0;
+    for (let i = 0; i < vecA.length; i++) {
+        dotProduct += vecA[i] * vecB[i];
+        magnitudeA += vecA[i] * vecA[i];
+        magnitudeB += vecB[i] * vecB[i];
+    }
+    return dotProduct / (Math.sqrt(magnitudeA) * Math.sqrt(magnitudeB));
 }
 
 /**
- * Generate a response using OpenAI Assistants API with RAG
+ * Generate a response using Local RAG (Standard Chat Completion)
+ * Much faster than Assistants API
  */
 export async function generateResponse(
     message: string,
@@ -75,54 +83,55 @@ export async function generateResponse(
 ): Promise<{ response: string; threadId: string }> {
     try {
         const openai = getOpenAIClient();
-        const assistantId = await getOrCreateAssistant();
 
-        // Create or use existing thread
-        let thread;
-        if (threadId) {
-            thread = { id: threadId };
-        } else {
-            thread = await openai.beta.threads.create();
+        // 1. Embed the query
+        const embeddingResponse = await openai.embeddings.create({
+            model: 'text-embedding-3-small',
+            input: message,
+            encoding_format: 'float',
+        });
+        const queryVector = embeddingResponse.data[0].embedding;
+
+        // 2. Search local memory
+        const store = loadVectorStore();
+        let context = '';
+
+        if (store && store.length > 0) {
+            const matches = store.map(item => ({
+                item,
+                similarity: cosineSimilarity(queryVector, item.embedding)
+            }))
+                .sort((a, b) => b.similarity - a.similarity)
+                .slice(0, 5); // Get top 5 chunks
+
+            context = matches.map(m => m.item.text).join('\n\n');
+            console.log(`Found ${matches.length} context chunks. Top similarity: ${matches[0]?.similarity.toFixed(4)}`);
         }
 
-        // Add user message to thread
-        await openai.beta.threads.messages.create(thread.id, {
-            role: 'user',
-            content: message,
-        });
-
-        // Run the assistant
-        const run = await openai.beta.threads.runs.createAndPoll(thread.id, {
-            assistant_id: assistantId,
-        });
-
-        if (run.status === 'completed') {
-            // Get the assistant's response
-            const messages = await openai.beta.threads.messages.list(thread.id);
-            const lastMessage = messages.data[0];
-
-            if (lastMessage.role === 'assistant' && lastMessage.content[0].type === 'text') {
-                const responseText = lastMessage.content[0].text.value;
-
-                // Validate Albanian-only response (basic check)
-                const validatedResponse = ensureAlbanianOnly(responseText);
-
-                return {
-                    response: validatedResponse,
-                    threadId: thread.id,
-                };
+        // 3. Generate Answer
+        const messages: any[] = [
+            { role: 'system', content: SYSTEM_PROMPT },
+            {
+                role: 'user',
+                content: `Context:\n${context}\n\nQuestion: ${message}`
             }
-        }
+        ];
 
-        // Log detailed error information
-        console.error('Assistant run failed!');
-        console.error('Run status:', run.status);
-        console.error('Run ID:', run.id);
-        if (run.last_error) {
-            console.error('Last error:', JSON.stringify(run.last_error, null, 2));
-        }
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: messages,
+            temperature: 0.7,
+            max_tokens: 500,
+        });
 
-        throw new Error(`Assistant run failed with status: ${run.status}`);
+        const responseText = completion.choices[0].message.content || '';
+        const validatedResponse = ensureAlbanianOnly(responseText);
+
+        return {
+            response: validatedResponse,
+            threadId: 'local-rag', // No persistent threads in this simple mode
+        };
+
     } catch (error) {
         console.error('Error generating response:', error);
         throw error;
@@ -153,15 +162,6 @@ function ensureAlbanianOnly(response: string): string {
     }
 
     return response;
-}
-
-/**
- * Create a new thread for a conversation
- */
-export async function createThread(): Promise<string> {
-    const openai = getOpenAIClient();
-    const thread = await openai.beta.threads.create();
-    return thread.id;
 }
 
 export { getOpenAIClient as openai };

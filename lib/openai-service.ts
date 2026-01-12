@@ -80,51 +80,14 @@ export async function generateResponse(
     try {
         const openai = getOpenAIClient();
 
-        // DEBUG: General Internet Connectivity Check
-        console.log('generateResponse: Step 0 - Ping Google');
-        try {
-            const googleController = new AbortController();
-            const googleTimeout = setTimeout(() => googleController.abort(), 3000);
-
-            const googleResp = await fetch('https://www.google.com', {
-                method: 'HEAD',
-                signal: googleController.signal
-            });
-            clearTimeout(googleTimeout);
-            console.log(`generateResponse: Step 0 - Google Ping Status: ${googleResp.status}`);
-        } catch (pingError: any) {
-            console.error('generateResponse: Step 0 - Google Ping FAILED:', pingError.message);
-        }
-
-        // 1. Embed the query (using fetch to avoid SDK hang)
-        console.log('generateResponse: Step 1 - Create Embedding (via fetch)');
-
-        const embedController = new AbortController();
-        const embedTimeout = setTimeout(() => embedController.abort(), 5000); // 5s timeout
-
-        const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-            },
-            body: JSON.stringify({
-                model: 'text-embedding-3-small',
-                input: message,
-                encoding_format: 'float'
-            }),
-            signal: embedController.signal
+        // 1. Embed the query using OpenAI SDK
+        console.log('generateResponse: Step 1 - Create Embedding');
+        const embeddingResponse = await openai.embeddings.create({
+            model: 'text-embedding-3-small',
+            input: message,
+            encoding_format: 'float',
         });
-        clearTimeout(embedTimeout);
-
-        if (!embeddingResponse.ok) {
-            const errorText = await embeddingResponse.text();
-            throw new Error(`OpenAI Embeddings Error: ${embeddingResponse.status} - ${errorText}`);
-        }
-
-        const embeddingData = await embeddingResponse.json();
-        const queryVector = embeddingData.data[0].embedding;
-
+        const queryVector = embeddingResponse.data[0].embedding;
         console.log('generateResponse: Step 2 - Embedding Created');
 
         // 2. Search local memory
@@ -156,57 +119,24 @@ export async function generateResponse(
 
 
 
-        // 3. Generate Answer using raw fetch to avoid SDK hang
-        console.log('generateResponse: Step 4 - Generate Completion (via fetch)');
+        // 3. Generate Answer using OpenAI SDK
+        console.log('generateResponse: Step 4 - Generate Completion');
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-5-mini',
+            messages: messages,
+            temperature: 0.7,
+            max_tokens: 500,
+        });
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000); // REDUCED: 4s timeout
+        console.log('generateResponse: Step 5 - Completion Received');
 
-        try {
-            const requestBody = {
-                model: 'gpt-4o-mini',
-                messages: messages,
-                temperature: 0.7,
-                max_tokens: 500
-            };
-            console.log('Request body size:', JSON.stringify(requestBody).length);
+        const responseText = completion.choices[0].message.content || '';
+        const validatedResponse = ensureAlbanianOnly(responseText);
 
-            const fetchResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-                },
-                body: JSON.stringify(requestBody),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!fetchResponse.ok) {
-                const errorText = await fetchResponse.text();
-                throw new Error(`OpenAI API Error: ${fetchResponse.status} - ${errorText}`);
-            }
-
-            const data = await fetchResponse.json();
-            const completion = data; // Match existing variable name for next steps
-
-            console.log('generateResponse: Step 5 - Completion Received');
-
-            const responseText = completion.choices[0].message.content || '';
-            const validatedResponse = ensureAlbanianOnly(responseText);
-
-            return {
-                response: validatedResponse,
-                threadId: 'local-rag',
-            };
-
-        } catch (fetchError: any) {
-            if (fetchError.name === 'AbortError') {
-                throw new Error('OpenAI Request Timed Out (>8s)');
-            }
-            throw fetchError;
-        }
+        return {
+            response: validatedResponse,
+            threadId: 'local-rag',
+        };
 
     } catch (error: any) {
         console.error('Error generating response:', error.message || error);

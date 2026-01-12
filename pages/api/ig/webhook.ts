@@ -52,8 +52,8 @@ async function handleIncomingMessage(
     try {
         console.log(`Received message from ${senderId}: ${messageText}`);
 
-        // Show typing indicator
-        await sendTypingIndicator(senderId);
+        // TEMPORARY: Skip typing indicator (causing 400 error)
+        // await sendTypingIndicator(senderId);
 
         // Generate AI response using RAG
         const { response } = await generateResponse(messageText);

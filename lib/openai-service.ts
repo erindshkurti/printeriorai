@@ -124,37 +124,62 @@ export async function generateResponse(
             console.error('generateResponse: Step 4.1 - Connectivity FAILED:', connError.message);
         }
 
-        const completionPromise = openai.chat.completions.create({
-            model: 'gpt-4o-mini',
-            messages: messages,
-            temperature: 0.7,
-            max_tokens: 500,
-        });
+        // 3. Generate Answer using raw fetch to avoid SDK hang
+        console.log('generateResponse: Step 4 - Generate Completion (via fetch)');
 
-        // Force a timeout of 8 seconds (Vercel limit is 10s)
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('OpenAI Request Timed Out (>8s)')), 8000)
-        );
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-        console.log('generateResponse: Step 4.5 - Awaiting Completion with Timeout...');
+        try {
+            const fetchResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 500
+                }),
+                signal: controller.signal
+            });
 
-        // Race the request against the clock
-        const completion = await Promise.race([completionPromise, timeoutPromise]) as any;
+            clearTimeout(timeoutId);
 
-        console.log('generateResponse: Step 5 - Completion Received');
-        const responseText = completion.choices[0].message.content || '';
-        const validatedResponse = ensureAlbanianOnly(responseText);
+            if (!fetchResponse.ok) {
+                const errorText = await fetchResponse.text();
+                throw new Error(`OpenAI API Error: ${fetchResponse.status} - ${errorText}`);
+            }
 
-        return {
-            response: validatedResponse,
-            threadId: 'local-rag', // No persistent threads in this simple mode
-        };
+            const data = await fetchResponse.json();
+            const completion = data; // Match existing variable name for next steps
+
+            console.log('generateResponse: Step 5 - Completion Received');
+
+            const responseText = completion.choices[0].message.content || '';
+            const validatedResponse = ensureAlbanianOnly(responseText);
+
+            return {
+                response: validatedResponse,
+                threadId: 'local-rag',
+            };
+
+        } catch (fetchError: any) {
+            if (fetchError.name === 'AbortError') {
+                throw new Error('OpenAI Request Timed Out (>8s)');
+            }
+            throw fetchError;
+        }
 
     } catch (error: any) {
         console.error('Error generating response:', error.message || error);
         throw error;
     }
 }
+
+
 
 /**
  * Basic validation to ensure response is in Albanian

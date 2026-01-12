@@ -39,8 +39,17 @@ async function uploadToVectorStore(markdownBatches: string[]): Promise<void> {
     }
 
     console.log(`Uploading ${markdownBatches.length} files to vector store...`);
+    console.log(`OPENAI_API_KEY exists: ${!!process.env.OPENAI_API_KEY}`);
+    console.log(`VECTOR_STORE_ID: ${VECTOR_STORE_ID}`);
 
-    const openaiClient = openai();
+    let openaiClient;
+    try {
+        openaiClient = openai();
+        console.log(`OpenAI client created successfully`);
+    } catch (error) {
+        console.error('Error creating OpenAI client:', error);
+        throw new Error(`Failed to create OpenAI client: ${error}`);
+    }
 
     // Get existing files in vector store
     // @ts-ignore - vectorStores API exists but may not be fully typed

@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const PAGE_ACCESS_TOKEN = process.env.IG_PAGE_ACCESS_TOKEN;
+const PAGE_ID = process.env.IG_PAGE_ID; // Instagram-connected Facebook Page ID
 const GRAPH_API_VERSION = 'v21.0';
 const GRAPH_API_URL = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
 
@@ -23,7 +24,7 @@ export async function sendMessage(
             console.log(`Sending message attempt ${attempt}/${MAX_RETRIES} to ${recipientId}...`);
 
             const response = await axios.post(
-                `${GRAPH_API_URL}/me/messages`,
+                `${GRAPH_API_URL}/${PAGE_ID}/messages`,
                 {
                     recipient: {
                         id: recipientId,

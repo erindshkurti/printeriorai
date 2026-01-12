@@ -7,6 +7,17 @@ const META_VERIFY_TOKEN = process.env.META_VERIFY_TOKEN;
 const META_APP_SECRET = process.env.META_APP_SECRET;
 
 /**
+ * Read raw body from request
+ */
+async function getRawBody(req: NextApiRequest): Promise<string> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+        chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+    }
+    return Buffer.concat(chunks).toString('utf8');
+}
+
+/**
  * Verify webhook signature from Meta
  */
 function verifyWebhookSignature(
@@ -19,7 +30,16 @@ function verifyWebhookSignature(
         .update(payload)
         .digest('hex');
 
-    return `sha256=${expectedSignature}` === signature;
+    const expected = `sha256=${expectedSignature}`;
+    const isValid = expected === signature;
+
+    // Debug logging
+    console.log('Signature validation:');
+    console.log('  Expected:', expected);
+    console.log('  Received:', signature);
+    console.log('  Valid:', isValid);
+
+    return isValid;
 }
 
 /**
@@ -79,11 +99,7 @@ export default async function handler(
         }
     } else if (req.method === 'POST') {
         // Read raw body for signature verification
-        const chunks: Buffer[] = [];
-        for await (const chunk of req) {
-            chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-        }
-        const rawBody = Buffer.concat(chunks).toString('utf8');
+        const rawBody = await getRawBody(req);
 
         // Verify webhook signature
         const signature = req.headers['x-hub-signature-256'] as string;

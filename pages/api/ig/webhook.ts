@@ -148,10 +148,12 @@ export default async function handler(
 
                         console.log(`📨 Message from ${senderId}: ${messageText}`);
 
-                        // Process message asynchronously
-                        handleIncomingMessage(senderId, messageText).catch(error => {
+                        // Process message synchronously to prevent Vercel from killing the lambda
+                        try {
+                            await handleIncomingMessage(senderId, messageText);
+                        } catch (error) {
                             console.error('Error in handleIncomingMessage:', error);
-                        });
+                        }
                     }
                 }
 
@@ -166,10 +168,13 @@ export default async function handler(
 
                         console.log(`📨 Message from ${senderId}: ${messageText}`);
 
-                        // Process message asynchronously (don't block webhook response)
-                        handleIncomingMessage(senderId, messageText).catch(error => {
+                        // Process message synchronously to prevent Vercel from killing the lambda
+                        // This might risk IG timeout, but it's required on Hobby plan
+                        try {
+                            await handleIncomingMessage(senderId, messageText);
+                        } catch (error) {
                             console.error('Error in handleIncomingMessage:', error);
-                        });
+                        }
                     } else {
                         console.log('Not a text message event');
                     }

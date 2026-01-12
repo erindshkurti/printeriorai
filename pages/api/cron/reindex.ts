@@ -47,7 +47,9 @@ async function uploadToVectorStore(markdownBatches: string[]): Promise<void> {
         openaiClient = openai();
         console.log(`OpenAI client created successfully`);
         console.log(`Client has beta: ${!!openaiClient.beta}`);
+        // @ts-ignore - vectorStores API exists but may not be fully typed
         console.log(`Client has beta.vectorStores: ${!!openaiClient.beta?.vectorStores}`);
+        // @ts-ignore - vectorStores API exists but may not be fully typed
         console.log(`Client has beta.vectorStores.files: ${!!openaiClient.beta?.vectorStores?.files}`);
     } catch (error) {
         console.error('Error creating OpenAI client:', error);

@@ -10,7 +10,7 @@ sequenceDiagram
     participant IG as 📱 Instagram
     participant Webhook as 🔗 Your Webhook<br/>(Vercel)
     participant OpenAI as 🤖 OpenAI
-    participant VectorDB as 📚 Vector Store
+    participant VectorDB as ☁️ OpenAI Vector Store
 
     Note over User,VectorDB: User sends a message
 

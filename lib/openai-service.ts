@@ -15,7 +15,6 @@ function getOpenAIClient(): OpenAI {
     return openaiInstance;
 }
 
-const ASSISTANT_ID = process.env.OPENAI_ASSISTANT_ID;
 const VECTOR_STORE_ID = process.env.OPENAI_VECTOR_STORE_ID;
 
 /**
@@ -35,43 +34,56 @@ Nëse pyetja është jashtë fushës së informacionit tuaj:
 - Sugjeroni kontakt përmes WhatsApp ose email për pyetje specifike të çmimeve
 - Ofroni numrin e telefonit ose email-in e kompanisë nëse është e nevojshme`;
 
+/**
+ * Search OpenAI Vector Store for relevant context
+ */
+async function searchVectorStore(query: string): Promise<string> {
+    if (!VECTOR_STORE_ID) {
+        console.warn('OPENAI_VECTOR_STORE_ID not set, skipping vector search');
+        return '';
+    }
 
-import fs from 'fs';
-import path from 'path';
-import embeddingsData from '../data/embeddings.json';
+    const openai = getOpenAIClient();
 
-// Load embeddings into memory once
-let vectorStore: any[] | null = null;
+    try {
+        console.log('Searching OpenAI vector store...');
 
-function loadVectorStore() {
-    if (!vectorStore) {
-        console.log('Loading vector store...');
-        try {
-            vectorStore = embeddingsData as any[];
-            console.log(`Loaded ${vectorStore?.length} embeddings from import.`);
-        } catch (error) {
-            console.error('Failed to load embeddings:', error);
-            vectorStore = [];
+        // Use the vector store search endpoint
+        const searchResults = await openai.vectorStores.search(VECTOR_STORE_ID, {
+            query: query,
+            max_num_results: 5,
+        });
+
+        if (!searchResults.data || searchResults.data.length === 0) {
+            console.log('No results found in vector store');
+            return '';
         }
-    }
-    return vectorStore;
-}
 
-function cosineSimilarity(vecA: number[], vecB: number[]) {
-    let dotProduct = 0;
-    let magnitudeA = 0;
-    let magnitudeB = 0;
-    for (let i = 0; i < vecA.length; i++) {
-        dotProduct += vecA[i] * vecB[i];
-        magnitudeA += vecA[i] * vecA[i];
-        magnitudeB += vecB[i] * vecB[i];
+        // Extract text content from search results
+        const contextChunks: string[] = [];
+        for (const result of searchResults.data) {
+            if (result.content && Array.isArray(result.content)) {
+                for (const content of result.content) {
+                    if (content.type === 'text' && content.text) {
+                        contextChunks.push(content.text);
+                    }
+                }
+            }
+        }
+
+        const context = contextChunks.join('\n\n');
+        console.log(`Found ${searchResults.data.length} results. Context length: ${context.length} characters`);
+
+        return context;
+    } catch (error: any) {
+        console.error('Error searching vector store:', error.message || error);
+        return '';
     }
-    return dotProduct / (Math.sqrt(magnitudeA) * Math.sqrt(magnitudeB));
 }
 
 /**
- * Generate a response using Local RAG (Standard Chat Completion)
- * Much faster than Assistants API
+ * Generate a response using OpenAI Vector Store RAG
+ * Uses cloud-based vector store for always up-to-date context
  */
 export async function generateResponse(
     message: string,
@@ -80,47 +92,24 @@ export async function generateResponse(
     try {
         const openai = getOpenAIClient();
 
-        // 1. Embed the query using OpenAI SDK
-        console.log('generateResponse: Step 1 - Create Embedding');
-        const embeddingResponse = await openai.embeddings.create({
-            model: 'text-embedding-3-small',
-            input: message,
-            encoding_format: 'float',
-        });
-        const queryVector = embeddingResponse.data[0].embedding;
-        console.log('generateResponse: Step 2 - Embedding Created');
+        // 1. Search vector store for relevant context
+        console.log('generateResponse: Step 1 - Search Vector Store');
+        const context = await searchVectorStore(message);
 
-        // 2. Search local memory
-        console.log('generateResponse: Step 3 - Search Local Store');
-        const store = loadVectorStore();
-        let context = '';
-
-        if (store && store.length > 0) {
-            const matches = store.map(item => ({
-                item,
-                similarity: cosineSimilarity(queryVector, item.embedding)
-            }))
-                .sort((a, b) => b.similarity - a.similarity)
-                .slice(0, 3); // REDUCED: Get top 3 chunks to save tokens/bandwidth
-
-            context = matches.map(m => m.item.text).join('\n\n');
-            console.log(`Found ${matches.length} context chunks. Top similarity: ${matches[0]?.similarity.toFixed(4)}`);
-            console.log(`Context length: ${context.length} characters`);
-        }
-
-        // 3. Generate Answer
+        // 2. Build messages with context
+        console.log('generateResponse: Step 2 - Build Messages');
         const messages: any[] = [
             { role: 'system', content: SYSTEM_PROMPT },
             {
                 role: 'user',
-                content: `Context:\n${context}\n\nQuestion: ${message}`
+                content: context
+                    ? `Context:\n${context}\n\nQuestion: ${message}`
+                    : message
             }
         ];
 
-
-
         // 3. Generate Answer using OpenAI SDK
-        console.log('generateResponse: Step 4 - Generate Completion');
+        console.log('generateResponse: Step 3 - Generate Completion');
         const completion = await openai.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: messages,
@@ -134,7 +123,7 @@ export async function generateResponse(
 
         return {
             response: validatedResponse,
-            threadId: 'local-rag',
+            threadId: 'cloud-rag',
         };
 
     } catch (error: any) {
@@ -142,8 +131,6 @@ export async function generateResponse(
         throw error;
     }
 }
-
-
 
 /**
  * Basic validation to ensure response is in Albanian

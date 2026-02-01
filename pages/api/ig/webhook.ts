@@ -52,8 +52,13 @@ async function handleIncomingMessage(
     try {
         console.log(`Received message from ${senderId}: ${messageText}`);
 
-        // TEMPORARY: Skip typing indicator (causing 400 error)
-        // await sendTypingIndicator(senderId);
+        // Show typing indicator while generating response
+        try {
+            await sendTypingIndicator(senderId);
+            console.log('Typing indicator sent');
+        } catch (typingError) {
+            console.warn('Failed to send typing indicator (non-critical):', typingError);
+        }
 
         // Generate AI response using RAG
         console.log('Calling OpenAI to generate response...');

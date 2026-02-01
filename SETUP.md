@@ -117,7 +117,6 @@ IG_PAGE_ACCESS_TOKEN=your_page_access_token_from_meta
 # OpenAI
 OPENAI_API_KEY=sk-your_openai_api_key
 OPENAI_VECTOR_STORE_ID=vs_your_vector_store_id
-OPENAI_ASSISTANT_ID=  # Leave empty, will be created automatically
 
 # Security
 CRON_SECRET=create_a_random_secret_here

@@ -45,7 +45,6 @@ IG_PAGE_ACCESS_TOKEN=your_page_access_token_here
 # OpenAI
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_VECTOR_STORE_ID=your_vector_store_id_here
-OPENAI_ASSISTANT_ID=your_assistant_id_here
 
 # Security
 CRON_SECRET=your_cron_secret_here

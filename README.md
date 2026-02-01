@@ -4,7 +4,7 @@ An AI-powered Instagram DM assistant that answers customer questions in Albanian
 
 ## Features
 
-- 🤖 **AI-Powered Responses**: Uses OpenAI Assistants API with RAG (Retrieval-Augmented Generation)
+- 🤖 **AI-Powered Responses**: Uses OpenAI Chat API with Vector Store RAG
 - 🇦🇱 **Albanian-Only**: All responses are in Albanian
 - 📚 **Website-Grounded**: Answers based strictly on printerior.al content
 - 🔄 **Auto-Refresh**: Weekly automatic reindexing of website content
@@ -13,7 +13,7 @@ An AI-powered Instagram DM assistant that answers customer questions in Albanian
 ## Architecture
 
 - **Next.js** (Pages Router) with TypeScript
-- **OpenAI Assistants API** with file_search for RAG
+- **OpenAI Chat Completions API** with Vector Store for RAG
 - **Meta Graph API** for Instagram messaging
 - **Vercel** for hosting and cron jobs
 
@@ -137,7 +137,7 @@ The cron job will automatically run weekly to refresh the content.
 1. User sends Instagram DM to your business page
 2. Meta sends webhook event to `/api/ig/webhook`
 3. Webhook validates signature and extracts message
-4. OpenAI Assistants API generates response using RAG
+4. OpenAI Chat API generates response using RAG context
 5. Response sent back to user via Instagram Messaging API
 
 ### Content Update Flow
@@ -153,7 +153,7 @@ The cron job will automatically run weekly to refresh the content.
 ```
 printeriorai/
 ├── lib/
-│   ├── openai-service.ts      # OpenAI Assistants API integration
+│   ├── openai-service.ts      # OpenAI Chat API & Vector Store integration
 │   ├── instagram-client.ts    # Instagram messaging functions
 │   └── crawler.ts             # Website crawler
 ├── pages/

@@ -144,8 +144,8 @@ export default async function handler(
 
         // Crawl website
         const pages = await crawlWebsite(WEBSITE_URL, {
-            maxDepth: 5,
-            maxPages: 200,
+            maxDepth: 10,
+            maxPages: 1000,
             sameDomainOnly: true,
         });
 

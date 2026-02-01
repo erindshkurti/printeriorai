@@ -113,6 +113,20 @@ function extractContent(
 ): { title: string; content: string; links: string[] } {
     const $ = cheerio.load(html);
 
+    // Extract links BEFORE removing elements (to capture pagination in <nav>)
+    const links: string[] = [];
+    $('a[href]').each((_, element) => {
+        const href = $(element).attr('href');
+        if (href) {
+            try {
+                const absoluteUrl = new URL(href, baseUrl).href;
+                links.push(absoluteUrl);
+            } catch (e) {
+                // Invalid URL, skip
+            }
+        }
+    });
+
     // Remove unwanted elements
     $('script, style, nav, footer, header, iframe, noscript').remove();
     $('.navigation, .menu, .sidebar, .footer, .header').remove();
@@ -136,20 +150,6 @@ function extractContent(
         .replace(/\s+/g, ' ') // Replace multiple spaces with single space
         .replace(/\n+/g, '\n') // Replace multiple newlines with single newline
         .trim();
-
-    // Extract links
-    const links: string[] = [];
-    $('a[href]').each((_, element) => {
-        const href = $(element).attr('href');
-        if (href) {
-            try {
-                const absoluteUrl = new URL(href, baseUrl).href;
-                links.push(absoluteUrl);
-            } catch (e) {
-                // Invalid URL, skip
-            }
-        }
-    });
 
     return { title, content, links };
 }

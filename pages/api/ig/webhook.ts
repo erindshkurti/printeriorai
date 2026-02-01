@@ -161,6 +161,12 @@ export default async function handler(
                 for (const messaging of entry.messaging || []) {
                     console.log('Messaging event:', JSON.stringify(messaging, null, 2));
 
+                    // Skip echo messages (messages sent by the bot itself)
+                    if (messaging.message?.is_echo) {
+                        console.log('Skipping echo message (sent by bot)');
+                        continue;
+                    }
+
                     // Handle message event
                     if (messaging.message && messaging.message.text) {
                         const senderId = messaging.sender.id;

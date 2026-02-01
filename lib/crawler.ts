@@ -23,8 +23,8 @@ export async function crawlWebsite(
     options: CrawlOptions = {}
 ): Promise<CrawledPage[]> {
     const {
-        maxDepth = 5,
-        maxPages = 200,
+        maxDepth = 10,
+        maxPages = 1000,
         sameDomainOnly = true,
     } = options;
 

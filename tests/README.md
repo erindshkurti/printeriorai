@@ -1,64 +1,52 @@
 # Tests Directory
 
-This directory contains all testing files and documentation for the Instagram AI Assistant.
+This directory contains test scripts for the Instagram AI Assistant.
 
-## Files
+## Test Scripts
 
-### Test Scripts
-- **[test-simple.ts](file:///Users/eshkurti/Development/Antigravity/printeriorai/tests/test-simple.ts)** - Simple crawler test (no credentials needed)
-- **[test-local.sh](file:///Users/eshkurti/Development/Antigravity/printeriorai/tests/test-local.sh)** - Automated test suite for all endpoints
-
-### Documentation
-- **[TESTING.md](file:///Users/eshkurti/Development/Antigravity/printeriorai/tests/TESTING.md)** - Quick start guide for local testing
-- **[test-endpoints.md](file:///Users/eshkurti/Development/Antigravity/printeriorai/tests/test-endpoints.md)** - Detailed endpoint testing guide
-
-## Comparison: test-simple.ts vs test-local.sh
-
-| Feature | test-simple.ts | test-local.sh |
-|---------|---------------|---------------|
-| **Tests crawler** | ✅ | ✅ |
-| **Tests webhooks** | ❌ | ✅ |
-| **Tests cron endpoint** | ❌ | ✅ |
-| **Needs dev server** | ❌ | ✅ |
-| **Needs credentials** | ❌ | Optional |
-| **Output** | Detailed crawl info | Summary of all tests |
-
-**Use test-simple.ts for:** Quick crawler verification  
-**Use test-local.sh for:** Full system testing
+| Script | Purpose | Needs Credentials? |
+|--------|---------|-------------------|
+| `test-simple.ts` | Crawler test | ❌ No |
+| `test-openai-response.ts` | Single OpenAI query test | ✅ Yes (OPENAI_API_KEY) |
+| `test-quality.ts` | Multi-question quality test | ✅ Yes (OPENAI_API_KEY) |
+| `test-local.sh` | Full integration test | ❌ No (mock env) |
 
 ## Quick Start
 
-### Test Crawler (No Credentials Needed)
+### Test Crawler (No Credentials)
 ```bash
 npx tsx tests/test-simple.ts
 ```
 
-### Run All Tests
+### Test OpenAI Response
+```bash
+npx tsx tests/test-openai-response.ts
+```
+
+### Test Response Quality (Multiple Questions)
+```bash
+npx tsx tests/test-quality.ts
+```
+
+### Run All Integration Tests
 ```bash
 ./tests/test-local.sh
 ```
 
-### Test Individual Endpoints
+## Manual Endpoint Testing
+
 ```bash
+# Start dev server first
+npm run dev
+
 # Webhook verification
-curl "http://localhost:3000/api/ig/webhook?hub.mode=subscribe&hub.verify_token=test&hub.challenge=SUCCESS"
+curl "http://localhost:3000/api/ig/webhook?hub.mode=subscribe&hub.verify_token=YOUR_TOKEN&hub.challenge=SUCCESS"
 
 # Reindex endpoint
-curl "http://localhost:3000/api/cron/reindex?secret=test_secret"
+curl "http://localhost:3000/api/cron/reindex?secret=YOUR_CRON_SECRET"
 ```
-
-## What Gets Tested
-
-✅ **Crawler** - Fetches and extracts content from printerior.al  
-✅ **Webhook Verification** - Meta webhook handshake  
-✅ **Webhook Signature Validation** - HMAC SHA256 validation  
-✅ **Cron Authentication** - Secret-based auth  
-✅ **Content Processing** - Markdown batching  
-
-❌ **OpenAI Integration** - Requires real API key (expected to fail with mock credentials)  
-❌ **Instagram Messaging** - Requires real access token (expected to fail with mock credentials)
 
 ## See Also
 
-- [SETUP.md](file:///Users/eshkurti/Development/Antigravity/printeriorai/SETUP.md) - Full setup guide
-- [README.md](file:///Users/eshkurti/Development/Antigravity/printeriorai/README.md) - Project documentation
+- [SETUP.md](../SETUP.md) - Full setup guide
+- [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) - System architecture

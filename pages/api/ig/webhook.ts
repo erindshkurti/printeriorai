@@ -108,11 +108,6 @@ export default async function handler(
         // Verify webhook signature
         const signature = req.headers['x-hub-signature-256'] as string;
 
-        // TEMPORARY: Skip signature validation for testing
-        // TODO: Fix signature validation
-        console.log('⚠️ WARNING: Signature validation temporarily disabled for testing');
-
-        /*
         if (!signature || !META_APP_SECRET) {
             console.error('Missing signature or app secret');
             return res.status(403).json({ error: 'Invalid signature' });
@@ -124,7 +119,8 @@ export default async function handler(
             console.error('Payload length:', rawBody.length);
             return res.status(403).json({ error: 'Invalid signature' });
         }
-        */
+
+        console.log('✅ Webhook signature verified');
 
         // Parse the body after signature verification
         const body = JSON.parse(rawBody);

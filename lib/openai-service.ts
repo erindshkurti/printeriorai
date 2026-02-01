@@ -31,8 +31,7 @@ RREGULLA TË RËNDËSISHME:
 
 Nëse pyetja është jashtë fushës së informacionit tuaj:
 - Kërkoni sqarim nëse pyetja nuk është e qartë
-- Sugjeroni kontakt përmes WhatsApp ose email për pyetje specifike të çmimeve
-- Ofroni numrin e telefonit ose email-in e kompanisë nëse është e nevojshme`;
+- Ofroni numrin e telefonit ose email-in e kompanisë ose WhatsApp nëse është e nevojshme`;
 
 /**
  * Search OpenAI Vector Store for relevant context

@@ -41,34 +41,51 @@ This guide will help you get the Instagram AI Assistant up and running.
 ### Create App
 
 1. Go to [developers.facebook.com](https://developers.facebook.com/)
-2. Click **Create App**
-3. Select **Business** as app type
-4. Name: `Printerior Instagram Assistant`
-5. **Copy the App ID and App Secret**
+2. Click **My Apps** (top navigation)
+3. Click **Create App**
+4. Select **Other** → **Business** as app type
+5. App name: `Printerior Instagram Assistant`
+6. Click **Create App**
 
-### Add Instagram Messaging
+### Add Instagram Messaging Use Case
 
-1. In your app dashboard, click **Add Product**
-2. Find **Instagram** and click **Set Up**
-3. Go to **Instagram** → **Basic Settings**
-4. Add your Instagram Business Account
+1. In your app dashboard, click **Use cases** in the left sidebar
+2. Click **Add use case**
+3. Find **Respond to messages and comments on Instagram** and click **Add**
+4. Click **Customize** on the added use case
 
-### Get Page Access Token
+### Configure API Setup with Instagram Login
 
-1. Go to **Instagram** → **API Setup**
-2. Select your Instagram Business Page
-3. Click **Generate Token**
-4. Grant `instagram_manage_messages` permission
-5. **Copy the Page Access Token**
+1. In the Use Case customization page, you'll see a 4-step setup:
+   - ✅ Add required messaging permissions
+   - 🔲 Generate access tokens
+   - 🔲 Configure webhooks
+   - 🔲 Set up Instagram business login
 
-### Configure Webhook (Do this AFTER deploying to Vercel)
+2. **Step 1 - Permissions**: These are auto-granted. Verify you see:
+   - `instagram_business_basic`
+   - `instagram_manage_comments`
+   - `instagram_business_manage_messages`
 
-1. Go to **Instagram** → **Webhooks**
-2. Click **Configure Webhooks**
-3. Callback URL: `https://your-app.vercel.app/api/ig/webhook`
-4. Verify Token: Create a random string (e.g., `my_secure_verify_token_123`)
-5. Subscribe to: **messages** field
-6. Save configuration
+3. **Step 2 - Generate Access Tokens**:
+   - Click **Add account** to link your Instagram Business account
+   - Click **Generate token** next to your account
+   - Log in with Instagram credentials when prompted
+   - Complete 2FA if required
+   - ✅ Check "I understand" and copy the token
+   - **This is your `IG_PAGE_ACCESS_TOKEN`** (starts with `IGAAS...`)
+
+4. **Step 3 - Configure Webhooks** (Do AFTER deploying to Vercel):
+   - Callback URL: `https://your-app.vercel.app/api/ig/webhook`
+   - Verify Token: Create a random string (e.g., `my_secure_verify_token_123`)
+   - Click **Verify and save**
+   - Subscribe to webhook fields: **messages** ✅
+
+### Get App Secret
+
+1. In left sidebar, click **App settings** → **Basic**
+2. Find **App Secret** and click **Show**
+3. **Copy the App Secret** - this is your `META_APP_SECRET`
 
 ---
 
@@ -163,11 +180,13 @@ vercel --prod
 Now that you have a production URL:
 
 1. Go back to Meta Developer dashboard
-2. Navigate to **Instagram** → **Webhooks**
-3. Edit webhook configuration:
+2. Navigate to **Use cases** → Click **Customize** on your Instagram use case
+3. Expand **Configure webhooks** section
+4. Enter your settings:
    - Callback URL: `https://your-app.vercel.app/api/ig/webhook`
    - Verify Token: Same as `META_VERIFY_TOKEN` in your env vars
-4. Click **Verify and Save**
+5. Click **Verify and save**
+6. Ensure **messages** field is ✅ Subscribed
 
 If verification succeeds, you'll see a green checkmark ✅
 

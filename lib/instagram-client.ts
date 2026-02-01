@@ -3,7 +3,7 @@ import axios from 'axios';
 const PAGE_ACCESS_TOKEN = process.env.IG_PAGE_ACCESS_TOKEN;
 const PAGE_ID = process.env.IG_PAGE_ID; // Instagram-connected Facebook Page ID
 const GRAPH_API_VERSION = 'v21.0';
-const GRAPH_API_URL = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
+const GRAPH_API_URL = `https://graph.instagram.com/${GRAPH_API_VERSION}`;
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
@@ -34,8 +34,9 @@ export async function sendMessage(
                     },
                 },
                 {
-                    params: {
-                        access_token: PAGE_ACCESS_TOKEN,
+                    headers: {
+                        'Authorization': `Bearer ${PAGE_ACCESS_TOKEN}`,
+                        'Content-Type': 'application/json',
                     },
                     timeout: 5000, // 5s timeout for the request itself
                 }
@@ -67,7 +68,9 @@ export async function getUserProfile(userId: string): Promise<any> {
             {
                 params: {
                     fields: 'name,username,profile_pic',
-                    access_token: PAGE_ACCESS_TOKEN,
+                },
+                headers: {
+                    'Authorization': `Bearer ${PAGE_ACCESS_TOKEN}`,
                 },
             }
         );
@@ -93,8 +96,9 @@ export async function markMessageSeen(senderId: string): Promise<void> {
                 sender_action: 'mark_seen',
             },
             {
-                params: {
-                    access_token: PAGE_ACCESS_TOKEN,
+                headers: {
+                    'Authorization': `Bearer ${PAGE_ACCESS_TOKEN}`,
+                    'Content-Type': 'application/json',
                 },
             }
         );
@@ -117,8 +121,9 @@ export async function sendTypingIndicator(recipientId: string): Promise<void> {
                 sender_action: 'typing_on',
             },
             {
-                params: {
-                    access_token: PAGE_ACCESS_TOKEN,
+                headers: {
+                    'Authorization': `Bearer ${PAGE_ACCESS_TOKEN}`,
+                    'Content-Type': 'application/json',
                 },
             }
         );

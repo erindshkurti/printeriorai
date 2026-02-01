@@ -53,8 +53,10 @@ For each user message, Instagram sends **3 webhook events** to your endpoint:
 | File | Purpose |
 |------|---------|
 | `pages/api/ig/webhook.ts` | Handles incoming webhooks, filters events |
+| `pages/api/cron/reindex.ts` | Scheduled content crawler and indexer |
 | `lib/instagram-client.ts` | Sends messages via Instagram Graph API |
 | `lib/openai-service.ts` | Generates AI responses using RAG |
+| `lib/crawler.ts` | Website crawler for content extraction |
 
 ## Why Echo Messages?
 
@@ -64,3 +66,49 @@ Instagram's Messaging API sends echo messages (`is_echo: true`) for all outgoing
 - Custom inbox UIs displaying sent messages
 
 For this simple bot, we filter them out since we don't need them.
+
+---
+
+## Content Reindexing (Cron)
+
+The bot's knowledge base is kept fresh via scheduled reindexing of the printerior.al website.
+
+```mermaid
+sequenceDiagram
+    participant Cron as ⏰ Vercel Cron
+    participant Reindex as 🔄 /api/cron/reindex
+    participant Crawler as 🕷️ Crawler
+    participant Website as 🌐 printerior.al
+    participant OpenAI as 🤖 OpenAI
+
+    Note over Cron,OpenAI: Weekly reindex (Sundays at midnight UTC)
+
+    Cron->>Reindex: GET /api/cron/reindex?secret=xxx
+    Reindex->>Reindex: Verify CRON_SECRET
+    
+    Reindex->>Crawler: Start crawl
+    Crawler->>Website: Fetch homepage
+    Website-->>Crawler: HTML content
+    
+    loop For each page
+        Crawler->>Website: Fetch linked pages
+        Website-->>Crawler: HTML content
+        Crawler->>Crawler: Extract text, chunk content
+    end
+    
+    Crawler-->>Reindex: All chunks ready
+    
+    Reindex->>OpenAI: Create embeddings
+    OpenAI-->>Reindex: Embedding vectors
+    
+    Reindex->>OpenAI: Upload to Vector Store
+    OpenAI-->>Reindex: Success
+    
+    Reindex-->>Cron: {"success": true, "pagesCrawled": 45}
+```
+
+## Cron Schedule
+
+| Job | Schedule | Endpoint | Purpose |
+|-----|----------|----------|---------|
+| **Reindex** | Sundays 00:00 UTC | `/api/cron/reindex` | Refresh knowledge base from website |
